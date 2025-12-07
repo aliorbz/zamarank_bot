@@ -63,10 +63,14 @@ async function findUserInTimeframe(baseUrl, handle, maxPages = 15) {
     }
 
     let list;
-    if (Array.isArray(data)) list = data;
-    else if (Array.isArray(data.items)) list = data.items;
-    else if (Array.isArray(data.leaderboard)) list = data.leaderboard;
-    else list = [];
+    if (Array.isArray(data)) {
+      list = data;
+    } else if (Array.isArray(data.data)) {
+      // <- THIS is the real leaderboard array
+      list = data.data;
+    } else {
+      list = [];
+    }
 
     if (!list.length) break;
 
