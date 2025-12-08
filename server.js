@@ -92,44 +92,63 @@ app.get("/zama/:handle", async (req, res) => {
   const raw = req.params.handle.toLowerCase();
   const handle = raw.startsWith("@") ? raw.slice(1) : raw;
 
-  // base for the official APIs
   const searchUrl = `https://zamarank.live/api/search/${handle}`;
 
-  // IMPORTANT: these are the S5 leaderboard endpoints, one per timeframe.
-  // They ALL expect a ?page=N at the end; each page has 100 users.
-  // If your Network tab shows a slightly different URL, edit ONLY the part
-  // before +page= below.
-
-  const base24 = "https://leaderboard-bice-mu.vercel.app/api/zama?timeframe=24h&sortBy=mindshare&page=";
-  const base7 = "https://leaderboard-bice-mu.vercel.app/api/zama?timeframe=7d&sortBy=mindshare&page=";
-  const base30 = "https://leaderboard-bice-mu.vercel.app/api/zama?timeframe=30d&sortBy=mindshare&page=";
+  // use the SAME base24/base7/base30 URLs that already work for you
+  const base24 =
+    "https://zamarank.live/api/zama?timeframe=24h&sortBy=mindshare&page=";
+  const base7 =
+    "https://zamarank.live/api/zama?timeframe=7d&sortBy=mindshare&page=";
+  const base30 =
+    "https://zamarank.live/api/zama?timeframe=30d&sortBy=mindshare&page=";
 
   try {
-    // 1) search endpoint = seasons + basic profile
     const searchData = await fetchJson(searchUrl);
 
-    // 2) S5 ranks & mindshare from paginated leaderboards
+    // seasons S1–S4 from search
+    const seasons = { s1: null, s2: null, s3: null, s4: null };
+    if (Array.isArray(searchData.results)) {
+      for (const r of searchData.results) {
+        if (!r || !r.season) continue;
+        const key = r.season.toLowerCase();
+        if (key in seasons) seasons[key] = r.rank ?? null;
+      }
+    }
+
+    const resultsArr = Array.isArray(searchData.results)
+      ? searchData.results
+      : [];
+    const allSeasonRanksNull = resultsArr.every(
+      (r) => !r || r.rank == null
+    );
+    const s5Found = searchData.s5 && searchData.s5.found === true;
+
+    // 🔴 EARLY EXIT: not ranked anywhere, don't scan S5 pages
+    if (allSeasonRanksNull && !s5Found) {
+      return res.json({
+        handle: searchData.handle || "@" + handle,
+        displayName: searchData.displayName || handle,
+        avatar: searchData.profilePic || null,
+        seasons,
+        s5: {
+          rank24h: null,
+          rank7d: null,
+          rank30d: null,
+          mindshare24h: null,
+          mindshare7d: null,
+          mindshare30d: null,
+        },
+        status: "not_ranked",
+      });
+    }
+
+    // 🟡 Otherwise: user exists → fetch S5 leaderboards (24h/7d/30d)
     const [row24, row7, row30] = await Promise.all([
       findUserInTimeframe(base24, handle),
       findUserInTimeframe(base7, handle),
       findUserInTimeframe(base30, handle),
     ]);
 
-    // 3) Seasons S1–S4 from searchData.results
-    const seasons = { s1: null, s2: null, s3: null, s4: null };
-    if (Array.isArray(searchData.results)) {
-      for (const r of searchData.results) {
-        if (!r || !r.season) continue;
-        const key = r.season.toLowerCase(); // "s1", "s2", etc.
-        if (key in seasons) seasons[key] = r.rank ?? null;
-      }
-    }
-
-    const notRankedAllSeasons = Object.values(seasons).every((v) => v == null);
-    const notRankedS5 = !row24 && !row7 && !row30;
-    const status = notRankedAllSeasons && notRankedS5 ? "not_ranked" : "ok";
-
-    // 4) Build one clean response object
     const response = {
       handle: searchData.handle || "@" + handle,
       displayName: searchData.displayName || handle,
@@ -143,7 +162,7 @@ app.get("/zama/:handle", async (req, res) => {
         mindshare7d: row7 ? row7.mindshare ?? null : null,
         mindshare30d: row30 ? row30.mindshare ?? null : null,
       },
-      status,
+      status: "ok",
     };
 
     res.json(response);
