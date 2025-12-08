@@ -96,11 +96,11 @@ app.get("/zama/:handle", async (req, res) => {
 
   // use the SAME base24/base7/base30 URLs that already work for you
   const base24 =
-    "https://zamarank.live/api/zama?timeframe=24h&sortBy=mindshare&page=";
+    "https://leaderboard-bice-mu.vercel.app/api/zama?timeframe=24h&sortBy=mindshare&page=";
   const base7 =
-    "https://zamarank.live/api/zama?timeframe=7d&sortBy=mindshare&page=";
+    "https://leaderboard-bice-mu.vercel.app/api/zama?timeframe=7d&sortBy=mindshare&page=";
   const base30 =
-    "https://zamarank.live/api/zama?timeframe=30d&sortBy=mindshare&page=";
+    "https://leaderboard-bice-mu.vercel.app/api/zama?timeframe=30d&sortBy=mindshare&page=";
 
   try {
     const searchData = await fetchJson(searchUrl);
