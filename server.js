@@ -125,6 +125,10 @@ app.get("/zama/:handle", async (req, res) => {
       }
     }
 
+    const notRankedAllSeasons = Object.values(seasons).every((v) => v == null);
+    const notRankedS5 = !row24 && !row7 && !row30;
+    const status = notRankedAllSeasons && notRankedS5 ? "not_ranked" : "ok";
+
     // 4) Build one clean response object
     const response = {
       handle: searchData.handle || "@" + handle,
@@ -139,6 +143,7 @@ app.get("/zama/:handle", async (req, res) => {
         mindshare7d: row7 ? row7.mindshare ?? null : null,
         mindshare30d: row30 ? row30.mindshare ?? null : null,
       },
+      status,
     };
 
     res.json(response);
