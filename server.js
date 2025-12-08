@@ -174,6 +174,17 @@ app.get("/zama/:handle", async (req, res) => {
   }
 });
 
+// -----------------------------------------
+// Keep Render awake by pinging itself
+// -----------------------------------------
+setInterval(() => {
+  fetch("https://zamarank-bot.onrender.com/")
+    .then(() => console.log("Self-ping OK"))
+    .catch(() => console.log("Self-ping failed"));
+}, 30000); // every 0.5 mins
+
+
+
 // --- Start server -----------------------------------------------
 
 app.listen(PORT, () => {
