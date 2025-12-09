@@ -1,9 +1,6 @@
-// server.js
-// Tiny backend that merges Zamarank search + S5 leaderboards into 1 clean JSON
-
-const{ createCanvas, loadImage } = require("@napi-rs/canvas");
 const express = require("express");
 const fetch = require("node-fetch");
+const{ createCanvas, loadImage } = require("@napi-rs/canvas");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
