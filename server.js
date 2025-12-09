@@ -1,6 +1,7 @@
 // server.js
 // Tiny backend that merges Zamarank search + S5 leaderboards into 1 clean JSON
 
+const{ createCanvas, loadImage } = require("@napi-rs/canvas");
 const express = require("express");
 const fetch = require("node-fetch");
 
@@ -182,6 +183,125 @@ setInterval(() => {
     .then(() => console.log("Self-ping OK"))
     .catch(() => console.log("Self-ping failed"));
 }, 30000); // every 0.5 mins
+
+
+
+// DYNAMIC RANK CARD USING CANVA BACKGROUND
+app.get("/card/:handle", async (req, res) => {
+  try {
+    const raw = req.params.handle.toLowerCase();
+    const handle = raw.startsWith("@") ? raw.slice(1) : raw;
+
+    // 1) Get combined Zama data from your own API
+    const data = await fetchJson(
+      "https://zamarank-bot.onrender.com/zama/" + handle
+    );
+
+    // 2) Load your Canva background (page 4, no zeros)
+    const BG_URL =
+      "https://cdn.discordapp.com/attachments/1385567455220334622/1447921742810058895/24h.png?ex=693961b4&is=69381034&hm=c2b432ab13d3372a47bcc915200fe55f42837718228903bf7de3a2efeb9b0442"; // TODO: paste your real link here
+
+    const bg = await loadImage(BG_URL);
+    const canvas = createCanvas(bg.width, bg.height);
+    const ctx = canvas.getContext("2d");
+
+    // Draw background exactly
+    ctx.drawImage(bg, 0, 0, bg.width, bg.height);
+
+    // -------- Avatar exactly in the circle --------
+    try {
+      const avatarUrl = data.avatar || "https://unavatar.io/twitter/zama_fhe";
+      const avatar = await loadImage(avatarUrl);
+
+      // These numbers assume 1200x600 canvas.
+      // Adjust slightly if needed until the face sits perfectly inside the ring.
+      const avatarSize = 260; // circle size
+      const avatarX = 125; // left offset
+      const avatarY = -55; // top offset
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(
+        avatarX + avatarSize / 2,
+        avatarY + avatarSize / 2,
+        avatarSize / 2,
+        0,
+        Math.PI * 2
+      );
+      ctx.closePath();
+      ctx.clip();
+      ctx.drawImage(avatar, avatarX, avatarY, avatarSize, avatarSize);
+      ctx.restore();
+    } catch (e) {
+      console.error("Avatar load failed", e);
+    }
+
+    // -------- Helper formatters --------
+    function fmtRank(v) {
+      return v == null ? "Not ranked" : "#" + v;
+    }
+    function fmtPct(v) {
+      if (v == null) return "Not ranked";
+      return v.toFixed(6) + "%";
+    }
+
+    const r24 = data.s5?.rank24h ?? null;
+    const r7 = data.s5?.rank7d ?? null;
+    const r30 = data.s5?.rank30d ?? null;
+    const m24 = data.s5?.mindshare24h ?? null;
+    const m7 = data.s5?.mindshare7d ?? null;
+    const m30 = data.s5?.mindshare30d ?? null;
+
+    // text color
+    ctx.fillStyle = "#000000";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+
+    // ---------- CONFIG YOU CAN TWEAK ----------
+    const rankX = 545; // all RANK numbers use this X
+    const msX = 1000; // all MINDSHARE numbers use this X
+
+    const baseY = 390; // Y for the 24H row
+    const rowGap = 178; // vertical gap between rows (24H → 7D → 30D)
+
+    // fonts
+    const rankFont = "bold 95px Impact, 'Arial Black',Sans-serif";
+    const msFont = "bold 90px Impact, 'Arial Black',Sans-serif";
+    // ------------------------------------------
+
+    // helper: draw outlined text (white border + black fill)
+function drawOutlinedText(text, x, y, font) {
+  ctx.font = font;
+  ctx.lineWidth = 8;
+  ctx.strokeStyle = "#ffffff"; // outline color
+  ctx.fillStyle = "#000000";   // fill color
+  ctx.strokeText(text, x, y);
+  ctx.fillText(text, x, y);
+}
+
+// RANK column
+drawOutlinedText(fmtRank(r24), rankX, baseY, rankFont);
+drawOutlinedText(fmtRank(r7),  rankX, baseY + rowGap, rankFont);
+drawOutlinedText(fmtRank(r30), rankX, baseY + 2 * rowGap, rankFont);
+
+// MINDSHARE column
+drawOutlinedText(fmtPct(m24), msX, baseY, msFont);
+drawOutlinedText(fmtPct(m7),  msX, baseY + rowGap, msFont);
+drawOutlinedText(fmtPct(m30), msX, baseY + 2 * rowGap, msFont);
+
+    // Optional tiny footer text on the card
+    ctx.font = "26px Sans-serif";
+    ctx.fillText("Made with love by @aliorbz", 40, bg.height - 40);
+
+    // Send PNG
+    const buffer = canvas.toBuffer("image/png");
+    res.set("Content-Type", "image/png");
+    res.send(buffer);
+  } catch (err) {
+    console.error("Card error", err);
+    res.status(500).json({ error: "card_error", message: err.message });
+  }
+});
 
 
 
