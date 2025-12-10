@@ -196,7 +196,7 @@ app.get("/card/:handle", async (req, res) => {
 
     // 2) Load your Canva background (page 4, no zeros)
     const BG_URL =
-      "https://cdn.discordapp.com/attachments/1385567455220334622/1447921742810058895/24h.png?ex=693961b4&is=69381034&hm=c2b432ab13d3372a47bcc915200fe55f42837718228903bf7de3a2efeb9b0442"; // TODO: paste your real link here
+      "https://cdn.discordapp.com/attachments/1385567455220334622/1447921742810058895/24h.png?ex=693ab334&is=693961b4&hm=01e1938ecec8f35a6dedf47d6df3a4bac6eda304d254b8826c75a3894b8938f4"; // TODO: paste your real link here
 
     const bg = await loadImage(BG_URL);
     const canvas = createCanvas(bg.width, bg.height);
